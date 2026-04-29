@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "description": "Seamless session continuity when switching Claude Code accounts. Tracks ephemeral state (monitors, background processes, cron jobs, work progress) so a new session can resume where the previous one left off.",
   "author": {
-    "name": "Arun Rajendra",
-    "email": "arun.rajendra8@gmail.com"
+    "name": "themoddedcube",
+    "email": "themoddedcube@gmail.com"
   },
   "license": "MIT"
 }
