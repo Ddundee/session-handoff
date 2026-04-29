@@ -77,7 +77,7 @@ Shows the delta between tracked state and live processes — what's running vs. 
 
 ```bash
 # Clone the plugin
-git clone https://github.com/arunr8/session-handoff.git ~/.claude/plugins/local/session-handoff
+git clone https://github.com/themoddedcube/session-handoff.git ~/.claude/plugins/local/session-handoff
 
 # Make hook scripts executable
 chmod +x ~/.claude/plugins/local/session-handoff/hooks/scripts/*.sh
