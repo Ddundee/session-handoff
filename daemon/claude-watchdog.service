@@ -1,0 +1,13 @@
+[Unit]
+Description=Claude Code Watchdog Daemon for %I
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=%h/.claude/plugins/session-handoff/daemon/claude-watchdog.sh %I
+Restart=on-failure
+RestartSec=10
+Environment=HOME=%h
+
+[Install]
+WantedBy=default.target

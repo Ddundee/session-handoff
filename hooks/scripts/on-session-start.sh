@@ -40,3 +40,38 @@ if [ -f "$HANDOFF_FILE" ]; then
 else
   echo "{}"
 fi
+
+# ── Watchdog auto-bootstrap ──────────────────────────────────────
+# Ensure the watchdog daemon is running for this project.
+# If no watchdog is alive, spawn one in the background.
+
+HANDOFF_DIR="$PROJECT_DIR/.claude/handoff"
+PID_FILE="$HANDOFF_DIR/watchdog.pid"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WATCHDOG_SCRIPT="$SCRIPT_DIR/../../daemon/claude-watchdog.sh"
+
+if [[ -x "$WATCHDOG_SCRIPT" ]]; then
+  watchdog_running=false
+
+  if [[ -f "$PID_FILE" ]]; then
+    existing_pid="$(cat "$PID_FILE" 2>/dev/null || true)"
+    if [[ -n "$existing_pid" ]] && kill -0 "$existing_pid" 2>/dev/null; then
+      watchdog_running=true
+    fi
+  fi
+
+  if [[ "$watchdog_running" == false ]]; then
+    mkdir -p "$HANDOFF_DIR"
+    # Find the Claude process to attach to (walk up from hook's parent)
+    claude_pid=""
+    candidate="$PPID"
+    while [[ -n "$candidate" ]] && (( candidate > 1 )); do
+      if ps -p "$candidate" -o comm= 2>/dev/null | grep -q "claude"; then
+        claude_pid="$candidate"
+        break
+      fi
+      candidate="$(ps -p "$candidate" -o ppid= 2>/dev/null | tr -d ' ' || true)"
+    done
+    nohup "$WATCHDOG_SCRIPT" "$PROJECT_DIR" "$claude_pid" >> "$HANDOFF_DIR/watchdog.log" 2>&1 &
+  fi
+fi
