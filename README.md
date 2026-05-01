@@ -1,76 +1,131 @@
-# Session Handoff
+<p align="center">
+  <h1 align="center">Session Handoff</h1>
+  <p align="center">
+    <strong>Seamless session continuity for Claude Code</strong>
+  </p>
+  <p align="center">
+    Automatically restarts Claude Code sessions when they cut off — zero manual intervention after install.
+  </p>
+  <p align="center">
+    <a href="https://github.com/themoddedcube/session-handoff/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+    <a href="https://github.com/themoddedcube/session-handoff/releases"><img src="https://img.shields.io/badge/version-0.2.0-green.svg" alt="Version 0.2.0"></a>
+    <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg" alt="Platform: Linux | macOS">
+    <img src="https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2.svg" alt="Claude Code Plugin">
+  </p>
+</p>
 
-A Claude Code plugin for seamless session continuity. Automatically restarts Claude Code sessions when they cut off — zero manual intervention after install.
+---
 
-## The Problem
-
-When you hit Claude Code session limits mid-task, you lose ephemeral state:
-
-- **Running monitors** (`tail -f`, log watchers, dev servers)
-- **Background processes** (builds, test runners, watchers)
-- **Cron jobs** created with `CronCreate` (in-memory only)
-- **Work context** (what you were doing, why, and what's next)
-- **Key decisions** made during the session
-
-Memory, plans, tasks, and git state persist to disk automatically — but operational context does not. Previously, recovering required manually running `/handoff resume`. Now the watchdog daemon handles it automatically.
-
-## How It Works
-
-Session Handoff uses three layers:
-
-### Layer 1: Automatic Hooks (Safety Net)
-
-Hooks fire on session events to capture process-level data without manual saves:
-
-| Hook | Event | What It Does |
-|------|-------|-------------|
-| `on-session-start.sh` | `SessionStart` | Detects handoff file, auto-bootstraps watchdog daemon |
-| `on-post-tool-use.sh` | `PostToolUse` (Bash) | Auto-logs background processes as they're started |
-| `on-stop.sh` | `Stop` | Captures a final process snapshot before session ends |
-
-### Layer 2: The `/handoff` Skill (Semantic Context)
-
-Explicit commands that capture not just process data, but the *meaning* behind your work — goals, decisions, progress, and next steps.
-
-State is stored in `.claude/handoff/session-state.md` in your **project directory** (not `~/.claude/`), so it survives account switches on the same machine.
-
-### Layer 3: Watchdog Daemon (Auto-Restart)
-
-A background daemon that monitors the Claude process and automatically restarts it when sessions cut off:
-
-```
-Claude exits (session limit, crash, network issue)
-  → Stop hook captures state
-  → Watchdog detects exit
-  → Backoff delay (if crash)
-  → Watchdog restarts Claude with /handoff resume
-  → Session continues with full context
-```
-
-The watchdog starts automatically — no configuration needed. On the first `SessionStart`, the hook spawns the watchdog in the background if it isn't already running.
-
-## Installation
+## Quick Start
 
 ```bash
-# Install the plugin (everything works automatically after this)
 claude plugin install github:themoddedcube/session-handoff
 ```
 
-That's it. The next time Claude starts, the watchdog daemon will auto-bootstrap and begin guarding your session.
+That's it. Start Claude, and the watchdog daemon auto-bootstraps in the background. If your session ever cuts off, it restarts automatically with full context.
+
+---
+
+## The Problem
+
+When Claude Code sessions hit their limit mid-task, you lose everything that isn't written to disk:
+
+| Lost on session end | Persists natively |
+|---|---|
+| Running monitors (`tail -f`, dev servers) | Git state |
+| Background processes (builds, watchers) | Files on disk |
+| Cron jobs (`CronCreate`) | Memory & plans |
+| Work context (what, why, what's next) | Tasks |
+| Key decisions & rationale | |
+
+**Session Handoff captures what Claude Code doesn't** — and the watchdog daemon ensures you never have to manually recover.
+
+---
+
+## How It Works
+
+```
+                          ┌──────────────────────────┐
+                          │     Session Running       │
+                          │                          │
+                          │  Hooks auto-capture:     │
+                          │  - Background processes  │
+                          │  - Running monitors      │
+                          │  - Work context          │
+                          └──────────┬───────────────┘
+                                     │
+                              Session exits
+                           (limit, crash, etc.)
+                                     │
+                          ┌──────────▼───────────────┐
+                          │     Stop Hook Fires       │
+                          │  Captures final snapshot  │
+                          └──────────┬───────────────┘
+                                     │
+                          ┌──────────▼───────────────┐
+                          │   Watchdog Detects Exit   │
+                          │  Checks restart budget   │
+                          └──────────┬───────────────┘
+                                     │
+                          ┌──────────▼───────────────┐
+                          │   Restarts Claude with    │
+                          │   /handoff resume         │
+                          │                          │
+                          │   Session continues with  │
+                          │   full context restored   │
+                          └──────────────────────────┘
+```
+
+### Three Layers of Protection
+
+**Layer 1 — Automatic Hooks** capture process-level data as you work, without any manual action:
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| `on-session-start.sh` | Session starts | Detects handoff file, bootstraps watchdog |
+| `on-post-tool-use.sh` | After Bash calls | Auto-logs background processes |
+| `on-stop.sh` | Session ends | Captures final process snapshot |
+
+**Layer 2 — `/handoff` Skill** adds semantic context on top of raw process data:
+
+```
+/handoff save      # Capture goals, decisions, progress, next steps
+/handoff resume    # Restore full context and restart services
+/handoff status    # Compare tracked state vs. live processes
+```
+
+**Layer 3 — Watchdog Daemon** monitors Claude and auto-restarts on exit:
+
+| Scenario | Action |
+|----------|--------|
+| Clean exit (code 0) | Restart after 2s |
+| Crash (non-zero) | Backoff: 2s → 5s → 10s → 30s → 60s |
+| 5 crashes in 10 min | Alert user, stop daemon |
+| 10 min stable | Reset crash counter |
+
+---
+
+## Installation
+
+### Plugin Install (Recommended)
+
+```bash
+claude plugin install github:themoddedcube/session-handoff
+```
+
+Everything works automatically after this. The watchdog daemon spawns on your next session start.
 
 ### Optional: Systemd Service
 
-For the watchdog to survive terminal closes and system reboots:
+For the watchdog to survive terminal closes and reboots:
 
 ```bash
-# Navigate to the plugin directory
 cd ~/.claude/plugins/local/session-handoff
-
-# Install systemd user service for your project
 ./daemon/setup-systemd.sh /path/to/your/project
 ```
 
-Manage the service:
+<details>
+<summary>Systemd management commands</summary>
 
 ```bash
 # Check status
@@ -86,53 +141,59 @@ systemctl --user stop claude-watchdog@<instance>.service
 systemctl --user disable claude-watchdog@<instance>.service
 ```
 
+</details>
+
+---
+
 ## Usage
 
-### Automatic (Default)
+### Automatic Mode (Default)
 
-After installing the plugin, everything is automatic:
+After installing, everything is hands-free:
 
-1. Start Claude in your project directory
-2. The `SessionStart` hook spawns the watchdog daemon in the background
-3. Work normally — hooks capture state as you go
-4. If Claude exits for any reason, the watchdog restarts it with full context
-5. The resumed session picks up where you left off
+1. **Start Claude** in your project directory
+2. **Work normally** — hooks silently capture state as you go
+3. **Session cuts off** — watchdog detects the exit
+4. **Auto-restart** — Claude relaunches with `/handoff resume`
+5. **Continue working** — full context restored, services restarted
 
 ### Manual Commands
 
-You can still use the skill commands directly:
+You can still use the skill commands directly when you want explicit control:
 
 ```bash
-# Save session state explicitly (hooks do this automatically)
-/handoff save
-
-# Resume from a saved state
-/handoff resume
-
-# Check what's tracked vs. what's running
-/handoff status
+/handoff save      # Snapshot current session state
+/handoff resume    # Restore from a saved snapshot
+/handoff status    # Show tracked vs. live process delta
 ```
 
-## Watchdog Behavior
+---
 
-### Restart Logic
+## What Gets Tracked
 
-| Scenario | Watchdog Action |
-|----------|----------------|
-| Clean exit (code 0) | Restart after 2s delay |
-| Crash (non-zero exit) | Backoff: 2s → 5s → 10s → 30s → 60s |
-| 5 crashes in 10 minutes | Alert user, stop watchdog |
-| 10 minutes stable | Reset crash counter |
+| State | Without Plugin | With Session Handoff |
+|-------|---------------|---------------------|
+| Running monitors | Lost | Logged with command + purpose |
+| Background processes | Lost | Auto-captured by hooks |
+| Cron jobs | Lost (in-memory only) | Saved with schedule + prompt |
+| Work context & decisions | Lost (in conversation) | Structured summary |
+| Shell environment | Lost | Key variables captured |
+| Plans, tasks, git, memory | Already persists | Referenced for quick reload |
 
-### Crash Loop Protection
+State is saved to `.claude/handoff/session-state.md` in your **project directory**, so it survives account switches on the same machine.
+
+---
+
+## Crash Loop Protection
 
 If Claude keeps crashing (5 times within 10 minutes), the watchdog:
 
-1. Sends a desktop notification (via `notify-send`)
+1. Sends a **desktop notification** via `notify-send`
 2. Logs details to `.claude/handoff/watchdog.log`
-3. Stops restarting — manual intervention required
+3. **Stops restarting** — manual intervention required
 
-To recover from a crash loop:
+<details>
+<summary>Recovering from a crash loop</summary>
 
 ```bash
 # Check what went wrong
@@ -142,37 +203,17 @@ cat .claude/handoff/watchdog.log
 claude
 /handoff save
 
-# Remove the stale PID file and restart
+# Remove the stale PID file
 rm .claude/handoff/watchdog.pid
 
-# The watchdog will auto-bootstrap on next Claude session start
+# Watchdog auto-bootstraps on next Claude session
 ```
 
-### Clean Shutdown
+</details>
 
-To stop the watchdog intentionally (without it restarting Claude):
+---
 
-```bash
-# Find and kill the watchdog
-kill $(cat .claude/handoff/watchdog.pid)
-```
-
-Sending `SIGTERM` or `SIGINT` to the watchdog forwards the signal to Claude and exits cleanly without restarting.
-
-## What Gets Tracked
-
-| State | Native Persistence | How Handoff Helps |
-|-------|-------------------|-------------------|
-| Monitors (`tail -f`, watchers) | Ephemeral | Logged with command + purpose |
-| Background processes | Ephemeral | Auto-captured by hook, enriched on save |
-| Cron jobs (`CronCreate`) | In-memory only | Saved with schedule + prompt |
-| Work context and decisions | In conversation only | Saved as structured summary |
-| Shell environment | Ephemeral | Key variables captured |
-| Plans and tasks | Already persistent | Referenced by path for quick reload |
-| Memory | Already persistent | Works across accounts automatically |
-| Git state | Already persistent | Branch and status captured for verification |
-
-## Plugin Structure
+## Architecture
 
 ```
 session-handoff/
@@ -180,86 +221,82 @@ session-handoff/
 │   └── plugin.json                 # Plugin metadata
 ├── skills/
 │   └── handoff/
-│       ├── SKILL.md                # Core skill: /handoff [save|resume|status]
+│       ├── SKILL.md                # /handoff [save|resume|status]
 │       └── references/
-│           ├── state-format.md     # Canonical handoff file template
-│           └── resume-checklist.md # Step-by-step resume procedure
+│           ├── state-format.md     # State file template
+│           └── resume-checklist.md # Resume procedure
 ├── hooks/
-│   ├── hooks.json                  # Hook event registrations
+│   ├── hooks.json                  # Hook registrations
 │   └── scripts/
-│       ├── capture-state.sh        # Process/port/git discovery utility
+│       ├── capture-state.sh        # Process/port/git discovery
 │       ├── on-session-start.sh     # Resume detection + watchdog bootstrap
 │       ├── on-post-tool-use.sh     # Background process auto-capture
-│       └── on-stop.sh              # Final state save on session end
+│       └── on-stop.sh              # Final state snapshot
 ├── daemon/
-│   ├── claude-watchdog.sh          # Watchdog daemon script
-│   ├── claude-watchdog.service     # Systemd user unit template
+│   ├── claude-watchdog.sh          # Watchdog daemon
+│   ├── claude-watchdog.service     # Systemd unit template
 │   └── setup-systemd.sh           # Systemd install helper
-├── docs/
-│   └── superpowers/specs/
-│       └── 2026-05-01-watchdog-daemon-design.md
 └── README.md
 ```
 
-## How the State File Works
-
-The handoff file at `.claude/handoff/session-state.md` is a structured Markdown document with sections for work context, progress, monitors, processes, cron jobs, decisions, environment, and next steps.
-
-**Hooks append raw data** (marked with `<!-- AUTO-CAPTURED -->` comments) as events happen during the session. When you run `/handoff save`, Claude integrates this raw data into the structured format, enriches it with semantic context (purpose, rationale), and writes a clean document.
-
-Even without running `/handoff save`, the `Stop` hook captures a final process snapshot, and background processes are auto-logged by the `PostToolUse` hook. The watchdog daemon uses this auto-captured state to resume.
-
-## How the Watchdog Works
-
-The watchdog is a simple bash script that:
-
-1. Launches Claude as a child process
-2. Waits for Claude to exit
-3. Checks the exit code and restart budget
-4. Restarts Claude with a `/handoff resume` prompt
-5. Repeats until intentionally stopped or crash loop detected
-
-**PID file** at `.claude/handoff/watchdog.pid` prevents duplicate watchdogs. The `SessionStart` hook checks this file — if the watchdog isn't running, it spawns one automatically.
-
-**Log file** at `.claude/handoff/watchdog.log` records all watchdog activity for debugging.
-
-## Requirements
-
-- Claude Code CLI (v2.1+)
-- `bash`, `ps`, `git` (standard on Linux/macOS)
-- Optional: `ss` or `lsof` (for port discovery)
-- Optional: `python3` (for JSON parsing in the PostToolUse hook)
-- Optional: `notify-send` (for desktop crash notifications on Linux)
-- Optional: `systemd` (for reboot-persistent watchdog)
+---
 
 ## Troubleshooting
 
-### Watchdog not starting
+<details>
+<summary>Watchdog not starting</summary>
 
 ```bash
-# Check if the PID file exists with a stale PID
+# Check for stale PID file
 cat .claude/handoff/watchdog.pid
 ps -p $(cat .claude/handoff/watchdog.pid)
 
-# Remove stale PID file
+# Remove stale PID and restart Claude
 rm .claude/handoff/watchdog.pid
-
-# Watchdog will auto-start on next Claude session
 ```
 
-### Claude keeps restarting when I don't want it to
+</details>
+
+<details>
+<summary>Claude keeps restarting when I don't want it to</summary>
 
 ```bash
 # Kill the watchdog cleanly
 kill $(cat .claude/handoff/watchdog.pid)
 ```
 
-### Checking watchdog logs
+Sending `SIGTERM` or `SIGINT` forwards the signal to Claude and exits without restarting.
+
+</details>
+
+<details>
+<summary>Checking watchdog logs</summary>
 
 ```bash
 tail -f .claude/handoff/watchdog.log
 ```
 
+</details>
+
+---
+
+## Requirements
+
+| Required | Optional |
+|----------|----------|
+| Claude Code CLI (v2.1+) | `notify-send` (desktop alerts) |
+| `bash`, `ps`, `git` | `systemd` (reboot persistence) |
+| | `ss` or `lsof` (port discovery) |
+| | `python3` (JSON parsing in hooks) |
+
+---
+
 ## License
 
-MIT
+[MIT](LICENSE)
+
+---
+
+<p align="center">
+  Built by <a href="https://github.com/themoddedcube">themoddedcube</a>
+</p>
