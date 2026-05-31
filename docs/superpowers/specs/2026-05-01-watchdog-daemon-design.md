@@ -105,7 +105,7 @@ User-level service at `~/.config/systemd/user/claude-watchdog@.service` (templat
 
 ```bash
 # Plugin install — everything works automatically
-claude plugin install github:themoddedcube/session-handoff
+claude plugin install github:Ddundee/session-handoff
 
 # Optional: systemd for reboot persistence
 ./daemon/setup-systemd.sh /path/to/project

@@ -7,8 +7,8 @@
     Automatically restarts Claude Code sessions when they cut off — zero manual intervention after install.
   </p>
   <p align="center">
-    <a href="https://github.com/themoddedcube/session-handoff/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
-    <a href="https://github.com/themoddedcube/session-handoff/releases"><img src="https://img.shields.io/badge/version-0.2.0-green.svg" alt="Version 0.2.0"></a>
+    <a href="https://github.com/Ddundee/session-handoff/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+    <a href="https://github.com/Ddundee/session-handoff/releases"><img src="https://img.shields.io/badge/version-0.2.0-green.svg" alt="Version 0.2.0"></a>
     <img src="https://img.shields.io/badge/platform-Linux%20%7C%20macOS-lightgrey.svg" alt="Platform: Linux | macOS">
     <img src="https://img.shields.io/badge/Claude%20Code-plugin-8A2BE2.svg" alt="Claude Code Plugin">
   </p>
@@ -19,7 +19,7 @@
 ## Quick Start
 
 ```bash
-claude plugin marketplace add github:themoddedcube/session-handoff
+claude plugin marketplace add github:Ddundee/session-handoff
 claude plugin install session-handoff
 ```
 
@@ -111,7 +111,7 @@ When Claude Code sessions hit their limit mid-task, you lose everything that isn
 ### Plugin Install (Recommended)
 
 ```bash
-claude plugin marketplace add github:themoddedcube/session-handoff
+claude plugin marketplace add github:Ddundee/session-handoff
 claude plugin install session-handoff
 ```
 
@@ -300,5 +300,5 @@ tail -f .claude/handoff/watchdog.log
 ---
 
 <p align="center">
-  Built by <a href="https://github.com/themoddedcube">themoddedcube</a>
+  Built by <a href="https://github.com/Ddundee">Ddundee</a>
 </p>
