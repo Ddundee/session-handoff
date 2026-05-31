@@ -19,7 +19,8 @@
 ## Quick Start
 
 ```bash
-claude plugin install github:themoddedcube/session-handoff
+claude plugin marketplace add github:themoddedcube/session-handoff
+claude plugin install session-handoff
 ```
 
 That's it. Start Claude, and the watchdog daemon auto-bootstraps in the background. If your session ever cuts off, it restarts automatically with full context.
@@ -110,7 +111,8 @@ When Claude Code sessions hit their limit mid-task, you lose everything that isn
 ### Plugin Install (Recommended)
 
 ```bash
-claude plugin install github:themoddedcube/session-handoff
+claude plugin marketplace add github:themoddedcube/session-handoff
+claude plugin install session-handoff
 ```
 
 Everything works automatically after this. The watchdog daemon spawns on your next session start.
