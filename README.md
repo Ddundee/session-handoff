@@ -19,7 +19,7 @@
 ## Quick Start
 
 ```bash
-claude plugin marketplace add github:Ddundee/session-handoff
+claude plugin marketplace add Ddundee/session-handoff
 claude plugin install session-handoff
 ```
 
@@ -111,7 +111,7 @@ When Claude Code sessions hit their limit mid-task, you lose everything that isn
 ### Plugin Install (Recommended)
 
 ```bash
-claude plugin marketplace add github:Ddundee/session-handoff
+claude plugin marketplace add Ddundee/session-handoff
 claude plugin install session-handoff
 ```
 
