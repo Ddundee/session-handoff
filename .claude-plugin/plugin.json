@@ -3,8 +3,8 @@
 	"version": "0.2.0",
 	"description": "Seamless session continuity with automatic watchdog daemon. Tracks ephemeral state and auto-restarts Claude Code sessions on interruption — zero manual intervention after install.",
 	"author": {
-		"name": "Ddundee",
-		"email": "dhanush@dhanushc.com"
+		"name": "themoddedcube",
+		"email": "themoddedcube@gmail.com"
 	},
 	"license": "MIT"
 }
